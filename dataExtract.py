@@ -12,7 +12,7 @@ def getDataRaw(dataSetName: str):
         sep=" ",
         header=None,
     )
-    dataRaw.drop(columns=dataRaw.columns[-1], inplace=True) # suppression de la dernière colonne à NaN
+    dataRaw.drop(columns=dataRaw.columns[-1], inplace=True) #suppression de la dernière colonne à NaN
     return dataRaw
     
 
@@ -30,7 +30,7 @@ def getDataSolution(dataSetName: str):
         sep=" ",
         header=None,
     )
-    dataSolution.drop(columns=dataSolution.columns[-1], inplace=True) # suppression de la dernière colonne à NaN
+    dataSolution.drop(columns=dataSolution.columns[-1], inplace=True) #suppression de la dernière colonne à NaN
     return dataSolution
         
 
