@@ -1,16 +1,19 @@
-import dataExtract as De
-import dataSeparate as Ds
+import typeProblem
+import dataExtract
 
 def main():
-    Xa = De.getDataRaw('A')
-    ya = De.getDataSolution('A')
-
-    X_train, X_val, X_test, y_train, y_val, y_test = Ds.separateData(Xa, ya)
-
-    print(f"Nb data: {len(Xa)}\n")
-    print(f"Nb train: {len(X_train)}\n")
-    print(f"Nb val: {len(X_val)}\n")
-    print(f"Nb test: {len(X_test)}")
-
+    dataA = dataExtract.getDataSolution("A")
+    dataB = dataExtract.getDataSolution("B")
+    dataC = dataExtract.getDataSolution("C")
+    dataD = dataExtract.getDataSolution("D")
+    dataE = dataExtract.getDataSolution("E")
+    dataF = dataExtract.getDataSolution("F")
+    
+    print(typeProblem.getTypeProblem(dataA))
+    print(typeProblem.getTypeProblem(dataB))
+    print(typeProblem.getTypeProblem(dataC))
+    print(typeProblem.getTypeProblem(dataD))
+    print(typeProblem.getTypeProblem(dataE))
+    print(typeProblem.getTypeProblem(dataF))
 if __name__ == "__main__":
     main()

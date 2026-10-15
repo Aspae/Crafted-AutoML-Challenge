@@ -1,3 +1,5 @@
+from classesProblems import Classes
+
 def getTypeProblem(dataSolution):
     numberOfOutput = dataSolution.shape[1]
     
@@ -7,15 +9,15 @@ def getTypeProblem(dataSolution):
 
         # Régression
         if (uniqVals / nbValsTot) > 0.30:
-            print("Régression")
+            return Classes.Regression
         
         elif uniqVals == 2:
-            print("Binaire")
+            return Classes.Binary
         
         else:
-            print("Multi-classes")
+            return Classes.Multi_class
     
     else:
-        print("Multi-labels")
+        return Classes.Multi_label
         
 
