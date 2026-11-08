@@ -7,7 +7,7 @@ from scipy.sparse import csr_matrix
 
 DATA_ROOT_PATH = "/info/corpus/ChallengeMachineLearning"
 
-# vérifie si les données sources représentent une matrice creuse
+# vérifie si les données sources représentent une matrice creuse
 def dataIsSparse(datasetName: str):
     limit = 100
     
@@ -43,14 +43,14 @@ def getDataRawFromSparse(datasetName: str):
     return dataRaw
 
 
-# chargement des données sources
+# chargement des données sources
 def getDataRaw(datasetName: str):
     
-    # si la matrice est creuse on utilise la bonne fonction pour charger les données
+    # si la matrice est creuse on utilise la bonne fonction pour charger les données
     if dataIsSparse(datasetName):
         return getDataRawFromSparse(datasetName)
     
-    # sinon on fait le chargement classique
+    # sinon on fait le chargement classique
     dataRaw = pd.read_csv(
         DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.data",
         sep=r"\s+",
@@ -64,7 +64,7 @@ def getDataRaw(datasetName: str):
     return dataRaw
 
 
-# chargement du type de données
+# chargement du type de données
 def getdataType(datasetName: str):
     dataType = pd.read_csv(
         DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.type",
@@ -78,7 +78,7 @@ def getdataType(datasetName: str):
     return dataType
 
 
-# chargement des labels attendus
+# chargement des labels attendus
 def getDataSolution(datasetName: str):
     dataSolution = pd.read_csv(
         DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.solution",
