@@ -32,25 +32,22 @@ from sklearn.model_selection import KFold, ParameterGrid, RandomizedSearchCV, St
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler,MaxAbsScaler
+from tqdm import tqdm
 
 from classesProblems import Classes
-from const import rand_state
+from const import rand_state, verbose, EVAL_METRICS
 
 TIME_BUDGET = int(os.environ.get('AUTOML_TIME_BUDGET', 3600))
 N_JOBS = int(os.environ.get('AUTOML_N_JOBS', 1))
 N_TRIALS = int(os.environ.get('AUTOML_N_TRIALS', 10))
+
+SHOW_PROGRESS = os.environ.get('AUTOML_PROGRESS', '1') != '0'
 
 CV_FOLDS = 5
 N_TREES = 100
 
 TIME_MARGIN = 0.8
 
-EVAL_METRICS = {
-    Classes.Regression: ["neg_root_mean_squared_error", "r2", "neg_mean_absolute_error"],
-    Classes.Binary: ["roc_auc", "accuracy", "f1_macro"],
-    Classes.Multi_class: ["f1_macro", "accuracy"],
-    Classes.Multi_label: ["f1_macro", "jaccard_samples"]
-}
 SCORING = {problem: metrics[0] for problem, metrics in EVAL_METRICS.items()}
 
 
@@ -91,18 +88,18 @@ def get_model_configs(typeProblem, sparse=False):
             _cfg("Ridge", Ridge(random_state=rand_state), {"model__alpha": [0.1, 1.0, 10.0, 100.0]}),
             _cfg("Lasso", Lasso(max_iter=5000, random_state=rand_state), {"model__alpha": [0.001, 0.01, 0.1, 1.0]}),
             _cfg("Hist Gradient Boosting Regressor", HistGradientBoostingRegressor(random_state=rand_state), {"model__learning_rate": [0.01, 0.05, 0.1], "model__max_leaf_nodes": [15, 31, 63]}, scale=False, impute=False, dense_only=True),
-            _cfg("Random Forest Regressor", RandomForestRegressor(n_estimators=N_TREES, random_state=rand_state), {"model__max_depth": [10, 20, None], "model__max_features": ["sqrt", "log2", None]}, scale=False)
+            _cfg("Random Forest Regressor", RandomForestRegressor(n_estimators=N_TREES, random_state=rand_state), {"model__max_depth": [10, 20], "model__max_features": ["sqrt", "log2"]}, scale=False)
         ]
     elif typeProblem in (Classes.Binary, Classes.Multi_class):
         specs = [
             _cfg("Logistic Regression", LogisticRegression(max_iter=1000, random_state=rand_state), {"model__C": [0.01, 0.1, 1.0, 10.0]}),
             _cfg("Hist Gradient Boosting Classifier", HistGradientBoostingClassifier(random_state=rand_state), {"model__learning_rate": [0.01, 0.05, 0.1], "model__max_leaf_nodes": [15, 31, 63]}, scale=False, impute=False, dense_only=True),
-            _cfg("Random Forest Classifier", RandomForestClassifier(n_estimators=N_TREES, random_state=rand_state), {"model__max_depth": [10, 20, None], "model__max_features": ["sqrt", "log2", None]}, scale=False)
+            _cfg("Random Forest Classifier", RandomForestClassifier(n_estimators=N_TREES, random_state=rand_state), {"model__max_depth": [10, 20], "model__max_features": ["sqrt", "log2"]}, scale=False)
         ]
     elif typeProblem == Classes.Multi_label:
         specs = [
             _cfg("OneVsRest Logistic Regression", OneVsRestClassifier(LogisticRegression(max_iter=1000, random_state=rand_state)), {"model__estimator__C": [0.01, 0.1, 1.0, 10.0]}),
-            _cfg("Random Forest Classifier", RandomForestClassifier(n_estimators=N_TREES, random_state=rand_state), {"model__max_depth": [10, 20, None], "model__max_features": ["sqrt", "log2", None]}, scale=False)
+            _cfg("Random Forest Classifier", RandomForestClassifier(n_estimators=N_TREES, random_state=rand_state), {"model__max_depth": [10, 20], "model__max_features": ["sqrt", "log2"]}, scale=False)
         ]
     else:
         raise ValueError(f"Unknown type of problem : {typeProblem}.")
@@ -161,7 +158,8 @@ def train_model(name, model, param_grid, X_train, y_train, scoring, cv, deadline
         cv = cv,
         scoring = scoring,
         random_state=rand_state,
-        refit=True
+        refit=True,
+        verbose=verbose
     )
 
     try:
@@ -178,34 +176,114 @@ def train_model(name, model, param_grid, X_train, y_train, scoring, cv, deadline
     }
 
 def training(models, X_train, y_train, scoring, cv, deadline):
-    trained_models = Parallel(N_JOBS)(
+    """
+    Run train_model on every candidate, in parallel on N_JOBS cores.
+
+    :param models: Candidates, as returned by get_model_configs.
+    :param X_train: Training features.
+    :param y_train: Training targets.
+    :param scoring: Name of the scikit-learn metric to maximize.
+    :param cv: Cross-validation splitter.
+    :param deadline: Timestamp after which new searches must not start.
+    :return: List of train_model results, without the skipped / failed models.
+    """
+    jobs = Parallel(N_JOBS, return_as="generator")(
         delayed(train_model)(cfg["name"], cfg["model"], cfg["param_grid"], X_train, y_train, scoring, cv, deadline if i > 0 else float("inf"))
         for i, cfg in enumerate(models)
     )
-    return [r for r in trained_models if r is not None]
+
+    trained_models = []
+    with tqdm(total=len(models), unit="model", disable=not SHOW_PROGRESS) as pbar:
+        sequential = N_JOBS == 1
+        pbar.set_description(f"Tuning {models[0]['name']}" if sequential else "Tuning models")
+        for i, result in enumerate(jobs):
+            if result is not None:
+                trained_models.append(result)
+                pbar.set_postfix(last=result["name"], cv=f"{result['cv_score']:.4f}")
+            pbar.update(1)
+            if sequential and i + 1 < len(models):
+                pbar.set_description(f"Tuning {models[i+1]['name']}")
+
+    return trained_models
 
 def launch_training(typeProblem: Classes, X_train, y_train, deadline):
+    """
+    Build the candidates matching the problem and the data, then train them all.
+
+    :param typeProblem: Type of problem (Classes enum).
+    :param X_train: Training features.
+    :param y_train: Training targets.
+    :param deadline: Timestamp after which new searches must not start.
+    :return: List of train_model results.
+    """
     configs = get_model_configs(typeProblem, sparse=issparse(X_train))
     return training(configs, X_train, y_train, SCORING[typeProblem], get_cv(typeProblem), deadline)
 
 def eval_model(model, X, y, metrics):
+    """
+    Score one fitted model on a dataset.
+
+    :param model: Fitted estimator.
+    :param X: Features to evaluate on.
+    :param y: True targets.
+    :param metrics: Names of the scikit-learn metrics to compute.
+    :return: {metric name: score}, with higher = better for every metric.
+    """
     return {metric: float(get_scorer(metric)(model, X, y)) for metric in metrics}
 
 def evaluation(models, X, y, metrics):
+    """
+    Score every trained model on a dataset (in the same order as `models`).
+
+    :param models: Results of train_model (dictionaries with an "estimator" key).
+    :param X: Features to evaluate on.
+    :param y: True targets.
+    :param metrics: Names of the scikit-learn metrics to compute.
+    :return: List of {metric name: score}, one per model.
+    """
     return Parallel(N_JOBS)(
         delayed(eval_model)(mdl["estimator"], X, y, metrics) for mdl in models
     )
 
 def launch_evaluation(typeProblem: Classes, trained_models, X, y):
+    """
+    Evaluate the trained models with the metrics of the given type of problem.
+
+    :param typeProblem: Type of problem (Classes enum).
+    :param trained_models: Results of launch_training.
+    :param X: Features to evaluate on (validation set).
+    :param y: True targets.
+    :return: List of {metric name: score}, one per model.
+    """
     return evaluation(trained_models, X, y, EVAL_METRICS[typeProblem])
 
 def _stack(a, b):
+    """
+    Concatenate two sets of rows (e.g. X_train and X_val), sparse or dense.
+
+    :param a: First array or sparse matrix.
+    :param b: Second array or sparse matrix.
+    :return: CSR matrix if any input is sparse, otherwise a NumPy array.
+    """
     if issparse(a) or issparse(b):
         return sparse_vstack([a,b]).tocsr()
     return np.concatenate([a,b], axis=0)
 
 def best_model(typeProblem, X_train, X_val, y_train, y_val):
+    """
+    Train and compare all candidates, then refit the best one on train + validation.
 
+    The validation set is never seen by the hyperparameter search.
+
+    :param typeProblem: Type of problem (Classes enum).
+    :param X_train: Training features.
+    :param X_val: Validation features.
+    :param y_train: Training targets.
+    :param y_val: Validation targets.
+    :return: (final_model, report). final_model is the winner refitted on train + validation.
+             report is the list of models sorted from best to worst, with their name,
+             cv_score, best_params and val_scores (for automl.eval()).
+    """
     deadline = time.time() + TIME_BUDGET * TIME_MARGIN
 
     trained_models = launch_training(typeProblem, X_train, y_train, deadline)
