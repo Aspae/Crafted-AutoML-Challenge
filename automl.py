@@ -13,7 +13,7 @@ class AutoML:
         self.type_problem = None
 
     def fit(self, data_dest: str):
-        data = "B"
+        data = "C"
         X = dataExtract.getDataRaw(data)
         y = dataExtract.getDataSolution(data)
         self.type_problem = typeProblem.getTypeProblem(y)

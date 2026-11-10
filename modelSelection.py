@@ -31,14 +31,14 @@ from sklearn.impute import SimpleImputer
 from sklearn.model_selection import KFold, ParameterGrid, RandomizedSearchCV, StratifiedKFold
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler,MaxAbsScaler
+from sklearn.preprocessing import StandardScaler, MaxAbsScaler
 from tqdm import tqdm
 
 from classesProblems import Classes
 from const import rand_state, verbose, EVAL_METRICS
 
-TIME_BUDGET = int(os.environ.get('AUTOML_TIME_BUDGET', 3600))
-N_JOBS = int(os.environ.get('AUTOML_N_JOBS', 1))
+TIME_BUDGET = int(os.environ.get('AUTOML_TIME_BUDGET', 7200))
+N_JOBS = int(os.environ.get('AUTOML_N_JOBS', 4))
 N_TRIALS = int(os.environ.get('AUTOML_N_TRIALS', 10))
 
 SHOW_PROGRESS = os.environ.get('AUTOML_PROGRESS', '1') != '0'

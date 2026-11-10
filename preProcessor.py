@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+
+from const import rand_state
 
 '''
-Ce code a pour but de normaliser les données affin qu'elles passent mieux dans le modèle
+Ce code a pour but de normaliser les données afin qu'elles passent mieux dans le modèle
 '''
-
 
 '''
 Binary
@@ -13,8 +15,19 @@ Categorical
 Numerical
 '''
 
+def train_val_test_split(X, y):
+    """
+    Separate features and targets in three split, train, validation and test.
 
+    :param X: Features.
+    :param y: Targets.
+    :return: Training features, validation features, test features, training targets, validation targets, test targets.
+    """
+    X_train, X_rest, y_train, y_rest = train_test_split(X, y, test_size=0.30, random_state=rand_state)
 
+    X_val, X_test, y_val, y_test = train_test_split(X_rest, y_rest, test_size=0.5, random_state=rand_state)
+
+    return X_train, X_val, X_test, y_train, y_val, y_test
 
 def NaN_replace(data, dataType):
     for i, col in enumerate(data.columns.copy()):
@@ -38,8 +51,6 @@ def NaN_replace(data, dataType):
 
     return data, dataType
 
-
-
 def delete_col_variance_at_0(data, dataType):
     for i, col in enumerate(data.columns.copy()):
         variance = data[col].var()
@@ -52,20 +63,11 @@ def delete_col_variance_at_0(data, dataType):
 
     return data, dataType
 
-
-from const import rand_state
-
-def train_val_test_split(X, y):
-    X_train, X_rest, y_train, y_rest = train_test_split(X, y, test_size=0.30, random_state=rand_state)
-
-    X_val, X_test, y_val, y_test = train_test_split(X_rest, y_rest, test_size=0.5, random_state=rand_state)
-
-    return X_train, X_val, X_test, y_train, y_val, y_test
 def delete_outliers_lines(data, dataType, dataSolution, borneInf=0.25, borneSup=0.75):
     listeOutliers = []
     for i, col in enumerate(data.columns.copy()):
 
-        # si la colonne n'est pas numérique on ne fais pas de traitements
+        # si la colonne n'est pas numérique on ne fais pas de traitements
         typeColonne = dataType.iloc[i, 0]
         if typeColonne != "Numerical":
             continue
@@ -96,7 +98,6 @@ def delete_outliers_lines(data, dataType, dataSolution, borneInf=0.25, borneSup=
     dataSolution = dataSolution.loc[data.index]
 
     return data, dataType, dataSolution
-
 
 """
 aux colonnes numériques dont le coefficient d'asymétrie (skew) est supérieur à 1
