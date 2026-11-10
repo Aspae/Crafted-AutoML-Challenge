@@ -1,11 +1,16 @@
 from classesProblems import Classes
 
+import numpy as np
 def getTypeProblem(dataSolution):
-    numberOfOutput = dataSolution.shape[1]
+    if dataSolution.ndim == 1:
+        numberOfOutput = 1
+        
+    else:
+        numberOfOutput = dataSolution.shape[1]
     
     if numberOfOutput == 1:
         nbValsTot = dataSolution.shape[0]
-        uniqVals = len(dataSolution[0].unique())
+        uniqVals = len(np.unique(dataSolution))
 
         # Régression
         if (uniqVals / nbValsTot) > 0.30:

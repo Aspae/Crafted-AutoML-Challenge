@@ -78,7 +78,7 @@ def getdataType(datasetName: str):
     return dataType
 
 
-# chargement des labels attendus
+# chargement des labels attendus (ground truth)
 def getDataSolution(datasetName: str):
     dataSolution = pd.read_csv(
         DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.solution",
@@ -90,6 +90,8 @@ def getDataSolution(datasetName: str):
     if dataSolution.iloc[:, -1].isna().all():
         dataSolution.drop(columns=dataSolution.columns[-1], inplace=True)
     
+    
+    # NON conservé pour le moment mais je garde au cas ou
     '''
     # Si la classe solution est représentée par "0 0 0 0 0 0 0 1 0 0" on revoie la valeur de l'index (ici 7)
     sumLines = dataSolution.sum(axis=1)
@@ -104,6 +106,8 @@ def getDataSolution(datasetName: str):
         )
         dataSolution = indices
     '''
-    
+    if dataSolution.shape[1] == 1:
+        dataSolution = dataSolution.to_numpy().ravel()
+        
     return dataSolution
         
