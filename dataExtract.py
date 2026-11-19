@@ -5,13 +5,11 @@ from sklearn.datasets import load_svmlight_file
 from scipy.sparse import csr_matrix
 
 
-DATA_ROOT_PATH = "/info/corpus/ChallengeMachineLearning"
-
 # vérifie si les données sources représentent une matrice creuse
-def dataIsSparse(datasetName: str):
+def dataIsSparse(pathToData: str):
     limit = 100
     
-    with open(DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.data") as f:
+    with open(f"{pathToData}.data") as f:
         for ligne in f:
             for element in ligne.split():
                 if ":" not in element:
@@ -21,12 +19,12 @@ def dataIsSparse(datasetName: str):
 
 
 # chargement d'une matrice de type creuse
-def getDataRawFromSparse(datasetName: str):
+def getDataRawFromSparse(pathToData: str):
     data = []
     indices = []
     indptr = [0]
 
-    with open(DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.data") as f:
+    with open(f"{pathToData}.data") as f:
         for ligne in f:
             for element in ligne.split():
                 indice, valeur = element.split(":")
@@ -44,15 +42,15 @@ def getDataRawFromSparse(datasetName: str):
 
 
 # chargement des données sources
-def getDataRaw(datasetName: str):
+def getDataRaw(pathToData: str):
     
     # si la matrice est creuse on utilise la bonne fonction pour charger les données
-    if dataIsSparse(datasetName):
-        return getDataRawFromSparse(datasetName)
+    if dataIsSparse(pathToData):
+        return getDataRawFromSparse(pathToData)
     
     # sinon on fait le chargement classique
     dataRaw = pd.read_csv(
-        DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.data",
+        f"{pathToData}.data",
         sep=r"\s+",
         header=None,
     )
@@ -65,9 +63,9 @@ def getDataRaw(datasetName: str):
 
 
 # chargement du type de données
-def getdataType(datasetName: str):
+def getdataType(pathToData: str):
     dataType = pd.read_csv(
-        DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.type",
+        f"{pathToData}.type",
         header=None,
     )
     
@@ -79,9 +77,9 @@ def getdataType(datasetName: str):
 
 
 # chargement des labels attendus (ground truth)
-def getDataSolution(datasetName: str):
+def getDataSolution(pathToData: str):
     dataSolution = pd.read_csv(
-        DATA_ROOT_PATH + f"/data_{datasetName}/data_{datasetName}.solution",
+        f"{pathToData}.solution",
         sep=r"\s+",
         header=None,
     )
